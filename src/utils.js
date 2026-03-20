@@ -24,15 +24,17 @@ export function displayDialogue(text, onDisplayEnd) {
     dialogue.innerHTML = "";
     clearInterval(intervalRef);
     closeBtn.removeEventListener("click", onCloseBtnClick);
+    removeEventListener("keypress", onEnterPress);
   }
 
-  closeBtn.addEventListener("click", onCloseBtnClick);
-
-  addEventListener("keypress", (key) => {
+  function onEnterPress(key) {
     if (key.code === "Enter") {
       closeBtn.click();
     }
-  });
+  }
+
+  closeBtn.addEventListener("click", onCloseBtnClick);
+  addEventListener("keypress", onEnterPress);
 }
 
 export function displayWelcomeDialogue(text, onDisplayEnd) {
@@ -61,15 +63,17 @@ export function displayWelcomeDialogue(text, onDisplayEnd) {
     dialogue.innerHTML = "";
     clearInterval(intervalRef);
     closeBtn.removeEventListener("click", onCloseBtnClick);
+    removeEventListener("keypress", onEnterPress);
   }
 
-  closeBtn.addEventListener("click", onCloseBtnClick);
-
-  addEventListener("keypress", (key) => {
+  function onEnterPress(key) {
     if (key.code === "Enter") {
       closeBtn.click();
     }
-  });
+  }
+
+  closeBtn.addEventListener("click", onCloseBtnClick);
+  addEventListener("keypress", onEnterPress);
 }
 
 
