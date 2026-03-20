@@ -1,5 +1,6 @@
 import kaboom from "kaboom";
 import { scaleFactor } from "./constants";
+import "./styles.css";
 
 export const k = kaboom({
   global: false,

@@ -1,6 +1,6 @@
 {
-  "name": "2d-portfolio-kaboom",
-  "private": true,
+  "name": "kharlroth2d",
+  "private": false,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
@@ -9,8 +9,8 @@
     "preview": "vite preview"
   },
   "devDependencies": {
-    "terser": "^5.27.1",
-    "vite": "^5.1.0"
+    "terser": "^5.46.1",
+    "vite": "^8.0.1"
   },
   "dependencies": {
     "kaboom": "^3000.1.17"
