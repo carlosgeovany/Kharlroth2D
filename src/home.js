@@ -12,7 +12,7 @@ export function registerHomeScene() {
       exit: {
         type: "scene",
         targetScene: "midgard",
-        spawnId: "default",
+        spawnId: "from-home",
       },
       lisa: {
         sound: "dogBark",

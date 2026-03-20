@@ -3,7 +3,6 @@ import { k } from "./kaboomCtx";
 
 export function registerWelcomeScene() {
   k.scene("welcome", () => {
-    ensureBackgroundMusic();
     k.setBackground(k.Color.fromHex("#12040a"));
 
     const centerX = k.width() / 2;
@@ -79,6 +78,7 @@ export function registerWelcomeScene() {
       }
 
       started = true;
+      ensureBackgroundMusic();
       k.go("home", { spawnId: "default" });
     };
 

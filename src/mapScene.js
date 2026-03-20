@@ -204,6 +204,15 @@ export function registerMapScene({
       playIdleAnimation(player);
     });
 
+    k.onKeyPress("escape", () => {
+      if (player.isTransitioning) {
+        return;
+      }
+
+      player.isTransitioning = true;
+      k.go("welcome");
+    });
+
     k.onKeyDown(() => {
       const keyMap = [
         k.isKeyDown("right"),

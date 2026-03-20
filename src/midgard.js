@@ -5,6 +5,9 @@ export function registerMidgardScene() {
     sceneName: "midgard",
     mapSprite: "midgard-map",
     mapJson: "./midgard.json",
+    customSpawns: {
+      "from-home": { x: 1128, y: 558 },
+    },
     boundaryActions: {
       home: {
         type: "scene",
