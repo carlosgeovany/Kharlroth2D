@@ -5,7 +5,7 @@ let backgroundMusic = null;
 export function loadSharedAssets() {
   k.loadFont("monogram", "./monogram.ttf");
 
-  k.loadSprite("spritesheet", "./player.png", {
+  k.loadSprite("spritesheet", "./archer.png", {
     sliceX: 3,
     sliceY: 4,
     anims: {
@@ -20,6 +20,7 @@ export function loadSharedAssets() {
 
   k.loadSprite("home-map", "./home.png");
   k.loadSprite("midgard-map", "./midgard.png");
+  k.loadSprite("splash-background", "./splash-background.png");
 
   k.loadSound("bgMusic", "./adventure.mp3");
   k.loadSound("dogBark", "./dog_bark.mp3");

@@ -3,17 +3,25 @@
   src: url("/monogram.ttf") format("truetype");
 }
 
+html,
 body {
   margin: 0;
+  width: 100%;
+  height: 100%;
   font-family: monogram, monospace;
   font-size: 2rem;
   overflow: hidden;
+  background: #000e2f;
 }
 
 #app {
   width: 100%;
   height: 100%;
   position: relative;
+}
+
+canvas {
+  display: block;
 }
 
 #textbox {
@@ -79,6 +87,7 @@ body {
   top: 1vh;
   display: flex;
   flex-direction: column;
+  font-size: 1rem;
   color: rgb(238 238 238);
 }
 
@@ -88,5 +97,6 @@ body {
   top: 1vh;
   display: flex;
   flex-direction: column;
+  font-size: 1rem;
   color: rgb(238 238 238);
 }
