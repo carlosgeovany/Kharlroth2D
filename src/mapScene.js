@@ -1,7 +1,11 @@
+import { createSceneConversationRuntime } from "./ai/sceneConversationRuntime";
 import { dialogueData, scaleFactor } from "./constants";
 import { ensureBackgroundMusic } from "./assets";
 import { k } from "./kaboomCtx";
+import { chatPanel } from "./ui/chatPanel";
 import { displayDialogue, setCamScale } from "./utils";
+
+const DIRECTION_KEYS = new Set(["ArrowRight", "ArrowLeft", "ArrowUp", "ArrowDown"]);
 
 function createPlayer() {
   return k.make([
@@ -18,6 +22,7 @@ function createPlayer() {
       direction: "down",
       isInDialogue: false,
       isTransitioning: false,
+      ignoreInputUntil: 0,
     },
     "player",
   ]);
@@ -41,6 +46,12 @@ function playIdleAnimation(player) {
   player.play("idle-side");
 }
 
+function pausePlayerInput(player) {
+  player.ignoreInputUntil = performance.now() + 140;
+  player.moveTo(player.pos);
+  playIdleAnimation(player);
+}
+
 export function registerMapScene({
   sceneName,
   mapSprite,
@@ -52,10 +63,17 @@ export function registerMapScene({
     ensureBackgroundMusic();
     const mapData = await (await fetch(mapJson)).json();
     const layers = mapData.layers;
+    const heldDirections = new Set();
+    const keyboardAbortController = new AbortController();
 
     const map = k.add([k.sprite(mapSprite), k.pos(0), k.scale(scaleFactor)]);
     const player = createPlayer();
     let defaultSpawnPoint = null;
+
+    function clearMovementState() {
+      heldDirections.clear();
+      pausePlayerInput(player);
+    }
 
     for (const layer of layers) {
       if (layer.name === "boundaries") {
@@ -83,6 +101,7 @@ export function registerMapScene({
                 return;
               }
 
+              clearMovementState();
               player.isTransitioning = true;
               k.go(action.targetScene, {
                 spawnId: action.spawnId ?? "default",
@@ -135,6 +154,41 @@ export function registerMapScene({
 
     setPlayerSpawn(player, spawnPoint);
     k.add(player);
+    createSceneConversationRuntime({
+      sceneName,
+      player,
+      pausePlayerInput: clearMovementState,
+    });
+
+    addEventListener("keydown", (event) => {
+      if (!DIRECTION_KEYS.has(event.key)) {
+        return;
+      }
+
+      if (chatPanel.isOpen() || player.isTransitioning || player.isInDialogue) {
+        heldDirections.delete(event.key);
+        return;
+      }
+
+      heldDirections.add(event.key);
+    }, { signal: keyboardAbortController.signal });
+
+    addEventListener("keyup", (event) => {
+      if (!DIRECTION_KEYS.has(event.key)) {
+        return;
+      }
+
+      heldDirections.delete(event.key);
+    }, { signal: keyboardAbortController.signal });
+
+    addEventListener("blur", () => {
+      clearMovementState();
+    }, { signal: keyboardAbortController.signal });
+
+    k.onSceneLeave(() => {
+      keyboardAbortController.abort();
+      heldDirections.clear();
+    });
 
     setCamScale(k);
 
@@ -148,6 +202,10 @@ export function registerMapScene({
 
     k.onMouseDown((mouseBtn) => {
       if (mouseBtn !== "left" || player.isInDialogue || player.isTransitioning) {
+        return;
+      }
+
+      if (performance.now() < player.ignoreInputUntil) {
         return;
       }
 
@@ -205,34 +263,30 @@ export function registerMapScene({
     });
 
     k.onKeyPress("escape", () => {
+      if (chatPanel.isOpen()) {
+        chatPanel.requestClose();
+        return;
+      }
+
       if (player.isTransitioning) {
         return;
       }
 
+      clearMovementState();
       player.isTransitioning = true;
       k.go("welcome");
     });
 
-    k.onKeyDown(() => {
-      const keyMap = [
-        k.isKeyDown("right"),
-        k.isKeyDown("left"),
-        k.isKeyDown("up"),
-        k.isKeyDown("down"),
-      ];
-
-      let pressedKeys = 0;
-      for (const keyPressed of keyMap) {
-        if (keyPressed) {
-          pressedKeys += 1;
-        }
-      }
-
-      if (pressedKeys > 1 || player.isInDialogue || player.isTransitioning) {
+    k.onUpdate(() => {
+      if (performance.now() < player.ignoreInputUntil) {
         return;
       }
 
-      if (keyMap[0]) {
+      if (player.isInDialogue || player.isTransitioning || heldDirections.size !== 1) {
+        return;
+      }
+
+      if (heldDirections.has("ArrowRight")) {
         player.flipX = false;
         if (player.curAnim() !== "walk-side") {
           player.play("walk-side");
@@ -242,7 +296,7 @@ export function registerMapScene({
         return;
       }
 
-      if (keyMap[1]) {
+      if (heldDirections.has("ArrowLeft")) {
         player.flipX = true;
         if (player.curAnim() !== "walk-side") {
           player.play("walk-side");
@@ -252,7 +306,7 @@ export function registerMapScene({
         return;
       }
 
-      if (keyMap[2]) {
+      if (heldDirections.has("ArrowUp")) {
         if (player.curAnim() !== "walk-up") {
           player.play("walk-up");
         }
@@ -261,7 +315,7 @@ export function registerMapScene({
         return;
       }
 
-      if (keyMap[3]) {
+      if (heldDirections.has("ArrowDown")) {
         if (player.curAnim() !== "walk-down") {
           player.play("walk-down");
         }

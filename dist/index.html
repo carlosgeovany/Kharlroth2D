@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>The Chronics of KHARLROTH</title>
-    <script type="module" crossorigin src="./assets/index-DJXqOdr6.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-BRYu9a3X.css">
+    <script type="module" crossorigin src="./assets/index-C3X4XEQt.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-zaX-9FBw.css">
   </head>
   <body>
     <div id="app">
@@ -26,6 +26,29 @@
             <div class="btn-container">
               <button id="close" class="ui-close-btn">Close</button>
             </div>
+          </div>
+        </div>
+        <div id="chatbox-container" style="display: none">
+          <div id="chatbox">
+            <div class="chat-header">
+              <div>
+                <p id="chat-npc-name" class="chat-title">Traveler</p>
+                <p id="chat-npc-status" class="chat-status">Approach to speak</p>
+              </div>
+              <button id="chat-close" class="ui-close-btn chat-close-btn" type="button">Close</button>
+            </div>
+            <div id="chat-transcript" class="chat-transcript"></div>
+            <form id="chat-form" class="chat-form">
+              <input
+                id="chat-input"
+                class="chat-input"
+                type="text"
+                maxlength="180"
+                autocomplete="off"
+                placeholder="Ask something of this character..."
+              />
+              <button id="chat-send" class="ui-close-btn chat-send-btn" type="submit">Send</button>
+            </form>
           </div>
         </div>
       </div>

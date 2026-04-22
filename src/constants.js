@@ -13,5 +13,5 @@ export const dialogueData = {
   welcome:`Welcome to the world of Kharlroth!<br>
   My name is Kharlroth, and I invite you to explore this magical world with me. It's going to be a fun adventure!
   `, 
-  lisa:`This Lisa, my pup. I love her...&#10084 She's the must fun to be with.`
+  lisa:`This is Lisa, our faithful hound. Her bark is fiercer than a winter gale, yet by the hearth she is as loyal and warm as any shield-sister of the home.`
 };

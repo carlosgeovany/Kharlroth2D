@@ -21,6 +21,14 @@ export function loadSharedAssets() {
   k.loadSprite("home-map", "./home.png");
   k.loadSprite("midgard-map", "./midgard.png");
   k.loadSprite("splash-background", "./splash-background.png");
+  k.loadSprite("npc-yrsa", "./femHeroHuman1v2.png", {
+    sliceX: 3,
+    sliceY: 4,
+  });
+  k.loadSprite("npc-eirik", "./mascHeroHuman2v2.png", {
+    sliceX: 3,
+    sliceY: 4,
+  });
 
   k.loadSound("bgMusic", "./adventure.mp3");
   k.loadSound("dogBark", "./dog_bark.mp3");
