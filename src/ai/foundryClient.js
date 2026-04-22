@@ -46,12 +46,12 @@ export class FoundryClient {
     this.modelsCache = null;
   }
 
-  async listModels(forceRefresh = false) {
+  async listModels(forceRefresh = false, { timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
     if (!forceRefresh && Array.isArray(this.modelsCache)) {
       return this.modelsCache;
     }
 
-    const response = await withTimeout((signal) => fetch(resolveUrl(this.modelsPath), { signal }));
+    const response = await withTimeout((signal) => fetch(resolveUrl(this.modelsPath), { signal }), timeoutMs);
     if (!response.ok) {
       throw new Error(`Unable to list Foundry models: ${await readErrorBody(response)}`);
     }
@@ -61,8 +61,8 @@ export class FoundryClient {
     return this.modelsCache;
   }
 
-  async listLoadedModels() {
-    const response = await withTimeout((signal) => fetch(resolveUrl(this.loadedModelsPath), { signal }));
+  async listLoadedModels({ timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
+    const response = await withTimeout((signal) => fetch(resolveUrl(this.loadedModelsPath), { signal }), timeoutMs);
     if (!response.ok) {
       throw new Error(`Unable to inspect loaded models: ${await readErrorBody(response)}`);
     }
@@ -71,7 +71,7 @@ export class FoundryClient {
     return Array.isArray(models) ? models : [];
   }
 
-  async loadModel(modelName, { ttl = DEFAULT_LOAD_TTL } = {}) {
+  async loadModel(modelName, { ttl = DEFAULT_LOAD_TTL, timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
     const query = new URLSearchParams({
       ttl: String(ttl),
     });
@@ -82,7 +82,7 @@ export class FoundryClient {
         method: "GET",
         signal,
       },
-    ));
+    ), timeoutMs);
 
     if (!response.ok) {
       throw new Error(`Unable to load Foundry model '${modelName}': ${await readErrorBody(response)}`);

@@ -1,7 +1,8 @@
 function createInitialState() {
   return {
     turns: [],
-    memorySummary: "",
+    hiddenSceneSummary: "",
+    sessionNotes: [],
     metrics: [],
   };
 }
@@ -36,11 +37,41 @@ export class ConversationStateStore {
   }
 
   setMemorySummary(npcId, summary) {
-    this.ensureState(npcId).memorySummary = summary.trim();
+    this.ensureState(npcId).hiddenSceneSummary = summary.trim();
   }
 
   getMemorySummary(npcId) {
-    return this.ensureState(npcId).memorySummary;
+    return this.ensureState(npcId).hiddenSceneSummary;
+  }
+
+  setHiddenSceneSummary(npcId, summary) {
+    this.ensureState(npcId).hiddenSceneSummary = summary.trim();
+  }
+
+  getHiddenSceneSummary(npcId) {
+    return this.ensureState(npcId).hiddenSceneSummary;
+  }
+
+  appendSessionNote(npcId, note) {
+    const cleaned = note.trim();
+    if (!cleaned) {
+      return;
+    }
+
+    const state = this.ensureState(npcId);
+    if (state.sessionNotes[state.sessionNotes.length - 1] === cleaned) {
+      return;
+    }
+
+    state.sessionNotes.push(cleaned);
+
+    if (state.sessionNotes.length > 6) {
+      state.sessionNotes.splice(0, state.sessionNotes.length - 6);
+    }
+  }
+
+  getSessionNotes(npcId) {
+    return [...this.ensureState(npcId).sessionNotes];
   }
 
   appendMetric(npcId, metric) {

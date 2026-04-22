@@ -4,6 +4,7 @@ export const npcRegistry = [
     name: "Yrsa",
     scene: "home",
     triggerBoundary: "Yrsa",
+    characterPackId: "yrsa",
     greeting: "Kharlroth... the hearth is warm, but the world beyond our walls is not. Speak, and I will answer as I can.",
     fallbackReply: "The words do not come to me just now, my love. Ask me again when the hearth settles.",
     tone: "Wise, calm, observant, and quietly powerful.",
