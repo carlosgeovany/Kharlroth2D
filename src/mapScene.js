@@ -52,12 +52,54 @@ function pausePlayerInput(player) {
   playIdleAnimation(player);
 }
 
+function resolveBoundaryRect(boundary, boundaryName) {
+  if (boundaryName && Array.isArray(boundary.polygon) && boundary.polygon.length > 0) {
+    const xs = boundary.polygon.map((point) => point.x);
+    const ys = boundary.polygon.map((point) => point.y);
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+
+    return {
+      x: boundary.x + minX,
+      y: boundary.y + minY,
+      width: Math.max(8, maxX - minX),
+      height: Math.max(8, maxY - minY),
+    };
+  }
+
+  if (boundaryName && Array.isArray(boundary.polyline) && boundary.polyline.length > 0) {
+    const xs = boundary.polyline.map((point) => point.x);
+    const ys = boundary.polyline.map((point) => point.y);
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+
+    return {
+      x: boundary.x + minX,
+      y: boundary.y + minY,
+      width: Math.max(8, maxX - minX),
+      height: Math.max(8, maxY - minY),
+    };
+  }
+
+  return {
+    x: boundary.x,
+    y: boundary.y,
+    width: boundary.width,
+    height: boundary.height,
+  };
+}
+
 export function registerMapScene({
   sceneName,
   mapSprite,
   mapJson,
   customSpawns = {},
   boundaryActions = {},
+  extraBoundaries = [],
 }) {
   k.scene(sceneName, async ({ spawnId = "default" } = {}) => {
     ensureBackgroundMusic();
@@ -77,15 +119,16 @@ export function registerMapScene({
 
     for (const layer of layers) {
       if (layer.name === "boundaries") {
-        for (const boundary of layer.objects) {
+        for (const boundary of [...layer.objects, ...extraBoundaries]) {
           const boundaryName = boundary.name?.trim();
+          const rect = resolveBoundaryRect(boundary, boundaryName);
 
           map.add([
             k.area({
-              shape: new k.Rect(k.vec2(0), boundary.width, boundary.height),
+              shape: new k.Rect(k.vec2(0), rect.width, rect.height),
             }),
             k.body({ isStatic: true }),
-            k.pos(boundary.x, boundary.y),
+            k.pos(rect.x, rect.y),
             boundaryName,
           ]);
 

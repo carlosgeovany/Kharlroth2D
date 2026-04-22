@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import threading
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 import requests
@@ -13,19 +15,45 @@ import requests
 from .character_data import get_character_ref, retrieve_character_knowledge
 
 
-FOUNDRY_BASE_URL = "http://127.0.0.1:52844"
-FOUNDRY_CHAT_URL = f"{FOUNDRY_BASE_URL}/v1/chat/completions"
-FOUNDRY_LOADED_MODELS_URL = f"{FOUNDRY_BASE_URL}/openai/loadedmodels"
-LOAD_TTL_SECONDS = 3600
+LLAMA_BINARY_PATH = Path(os.environ.get(
+    "KHARLROTH_LLAMA_SERVER_PATH",
+    Path.home()
+    / "AppData"
+    / "Local"
+    / "Microsoft"
+    / "WinGet"
+    / "Packages"
+    / "ggml.llamacpp_Microsoft.Winget.Source_8wekyb3d8bbwe"
+    / "llama-server.exe",
+))
 
-MODEL_ROLE_PREFERENCES = {
-    "router": ["qwen2.5-1.5b", "qwen2.5-0.5b", "qwen2.5-7b", "qwen3-0.6b"],
-    "guardrail": ["qwen2.5-1.5b", "qwen2.5-0.5b", "qwen2.5-7b", "qwen3-0.6b"],
-    "validator": ["qwen2.5-1.5b", "qwen2.5-0.5b", "qwen2.5-7b", "qwen3-0.6b"],
-    "memory": ["qwen2.5-1.5b", "qwen2.5-0.5b", "qwen2.5-7b", "qwen3-0.6b"],
-    "responder_fast": ["phi-3.5-mini", "phi-4-mini", "qwen2.5-7b", "qwen2.5-1.5b", "qwen3-0.6b"],
-    "responder_slow": ["phi-4-mini-reasoning", "deepseek-r1-7b", "gpt-oss-20b", "qwen2.5-14b", "phi-4-mini", "phi-3.5-mini", "qwen2.5-7b", "qwen2.5-1.5b", "qwen3-0.6b"],
-    "tuner": ["phi-4-mini-reasoning", "phi-4-mini", "phi-3.5-mini", "qwen2.5-14b", "qwen2.5-7b", "qwen2.5-1.5b", "qwen3-0.6b"],
+DEFAULT_MODEL_REPO = os.environ.get(
+    "KHARLROTH_LLAMA_MODEL_REPO",
+    "Qwen/Qwen2.5-3B-Instruct-GGUF",
+)
+DEFAULT_MODEL_FILE = os.environ.get(
+    "KHARLROTH_LLAMA_MODEL_FILE",
+    "qwen2.5-3b-instruct-q4_k_m.gguf",
+)
+
+MODEL_SERVER_PROFILES = {
+    "main": {
+        "repo": DEFAULT_MODEL_REPO,
+        "file": DEFAULT_MODEL_FILE,
+        "alias": "kharlroth-main",
+        "port": 8092,
+        "ctx": 6144,
+    },
+}
+
+MODEL_ROLE_TO_PROFILE = {
+    "router": "main",
+    "guardrail": "main",
+    "validator": "main",
+    "memory": "main",
+    "responder_fast": "main",
+    "responder_slow": "main",
+    "tuner": "main",
 }
 
 MODERN_TOPIC_PATTERNS = [
@@ -222,65 +250,143 @@ class NpcConversationState:
     metrics: list[dict[str, Any]] = field(default_factory=list)
 
 
-class FoundryPythonBridge:
+@dataclass
+class LlamaServerHandle:
+    profile_name: str
+    repo: str
+    hf_file: str
+    alias: str
+    port: int
+    ctx_size: int
+    process: subprocess.Popen[str] | None = None
+    log_file: Path | None = None
+
+    @property
+    def base_url(self) -> str:
+        return f"http://127.0.0.1:{self.port}"
+
+    @property
+    def health_url(self) -> str:
+        return f"{self.base_url}/health"
+
+    @property
+    def chat_url(self) -> str:
+        return f"{self.base_url}/v1/chat/completions"
+
+
+class LlamaCppBridge:
     def __init__(self) -> None:
-        self.selected_models: dict[str, str] = {}
-        self.failed_aliases: set[str] = set()
         self.lock = threading.Lock()
+        self.servers = {
+            name: LlamaServerHandle(
+                profile_name=name,
+                repo=config["repo"],
+                hf_file=config["file"],
+                alias=config["alias"],
+                port=config["port"],
+                ctx_size=config["ctx"],
+            )
+            for name, config in MODEL_SERVER_PROFILES.items()
+        }
+        self.selected_models: dict[str, str] = {}
 
-    def get_loaded_models(self) -> list[str]:
-        response = requests.get(FOUNDRY_LOADED_MODELS_URL, timeout=15)
-        response.raise_for_status()
-        models = response.json()
-        return models if isinstance(models, list) else []
+    def _ensure_binary_exists(self) -> None:
+        if not LLAMA_BINARY_PATH.exists():
+            raise RuntimeError(f"llama-server.exe was not found at {LLAMA_BINARY_PATH}")
 
-    def _matches_alias(self, model_id: str, alias: str) -> bool:
-        return alias.lower() in model_id.lower()
+    def _build_start_args(self, server: LlamaServerHandle) -> list[str]:
+        thread_count = max(4, min(12, (os.cpu_count() or 8) - 2))
+        return [
+            str(LLAMA_BINARY_PATH),
+            "--hf-repo",
+            server.repo,
+            "--hf-file",
+            server.hf_file,
+            "--alias",
+            server.alias,
+            "--host",
+            "127.0.0.1",
+            "--port",
+            str(server.port),
+            "--ctx-size",
+            str(server.ctx_size),
+            "--threads",
+            str(thread_count),
+            "--threads-batch",
+            str(thread_count),
+            "--parallel",
+            "2",
+            "--jinja",
+            "--reasoning",
+            "off",
+            "--flash-attn",
+            "auto",
+            "--gpu-layers",
+            "auto",
+            "--fit",
+            "on",
+            "--metrics",
+        ]
 
-    def _try_load_alias(self, alias: str) -> bool:
-        if alias in self.failed_aliases:
+    def _is_process_running(self, server: LlamaServerHandle) -> bool:
+        return server.process is not None and server.process.poll() is None
+
+    def _health_check(self, server: LlamaServerHandle) -> bool:
+        try:
+            response = requests.get(server.health_url, timeout=5)
+            return response.status_code == 200
+        except requests.RequestException:
             return False
 
-        result = subprocess.run(
-            ["cmd", "/c", "foundry", "model", "load", alias, "--ttl", str(LOAD_TTL_SECONDS)],
-            capture_output=True,
-            text=True,
-            timeout=120,
-            check=False,
-        )
-        if result.returncode == 0:
-            return True
+    def _start_server_if_needed(self, profile_name: str) -> LlamaServerHandle:
+        self._ensure_binary_exists()
+        server = self.servers[profile_name]
 
-        self.failed_aliases.add(alias)
-        return False
+        with self.lock:
+            if self._is_process_running(server) and self._health_check(server):
+                return server
+
+            if self._is_process_running(server):
+                return server
+
+            logs_dir = Path.cwd() / "python_ai" / "logs"
+            logs_dir.mkdir(parents=True, exist_ok=True)
+            log_path = logs_dir / f"{server.profile_name}.log"
+            server.log_file = log_path
+            log_handle = open(log_path, "a", encoding="utf-8")
+            server.process = subprocess.Popen(
+                self._build_start_args(server),
+                stdout=log_handle,
+                stderr=subprocess.STDOUT,
+                text=True,
+                cwd=str(Path.cwd()),
+            )
+
+        return server
+
+    def _wait_for_server_ready(self, server: LlamaServerHandle, startup_timeout: int = 3600) -> LlamaServerHandle:
+        started_at = time.time()
+        while time.time() - started_at < startup_timeout:
+            if server.process and server.process.poll() is not None:
+                raise RuntimeError(f"llama-server for profile '{server.profile_name}' exited early. See {server.log_file}")
+
+            try:
+                response = requests.get(server.health_url, timeout=10)
+                if response.status_code == 200:
+                    return server
+            except requests.RequestException:
+                pass
+
+            time.sleep(2)
+
+        raise TimeoutError(f"llama-server for profile '{server.profile_name}' did not become ready within {startup_timeout} seconds.")
 
     def ensure_model_for_role(self, role: str) -> str:
-        with self.lock:
-            if role in self.selected_models:
-                return self.selected_models[role]
-
-            loaded_models = self.get_loaded_models()
-            for alias in MODEL_ROLE_PREFERENCES[role]:
-                for model_id in loaded_models:
-                    if self._matches_alias(model_id, alias):
-                        self.selected_models[role] = model_id
-                        return model_id
-
-            for alias in MODEL_ROLE_PREFERENCES[role]:
-                if not self._try_load_alias(alias):
-                    continue
-
-                loaded_models = self.get_loaded_models()
-                for model_id in loaded_models:
-                    if self._matches_alias(model_id, alias):
-                        self.selected_models[role] = model_id
-                        return model_id
-
-            if loaded_models:
-                self.selected_models[role] = loaded_models[0]
-                return loaded_models[0]
-
-            raise RuntimeError("No Foundry model is currently loaded and no preferred alias could be loaded.")
+        profile_name = MODEL_ROLE_TO_PROFILE[role]
+        server = self._start_server_if_needed(profile_name)
+        selected_model = f"{server.repo}/{server.hf_file}"
+        self.selected_models[role] = selected_model
+        return selected_model
 
     def chat_completion(
         self,
@@ -290,16 +396,17 @@ class FoundryPythonBridge:
         temperature: float,
         timeout_seconds: int,
     ) -> dict[str, Any]:
-        model_id = self.ensure_model_for_role(model_role)
+        profile_name = MODEL_ROLE_TO_PROFILE[model_role]
+        server = self._wait_for_server_ready(self._start_server_if_needed(profile_name))
         payload = {
-            "model": model_id,
+            "model": server.alias,
             "messages": messages,
-            "max_completion_tokens": max_completion_tokens,
+            "max_tokens": max_completion_tokens,
             "temperature": temperature,
             "stream": False,
         }
         response = requests.post(
-            FOUNDRY_CHAT_URL,
+            server.chat_url,
             headers={"Content-Type": "application/json"},
             data=json.dumps(payload),
             timeout=timeout_seconds,
@@ -307,17 +414,20 @@ class FoundryPythonBridge:
         response.raise_for_status()
         data = response.json()
         first_choice = data.get("choices", [{}])[0]
-        raw_content = first_choice.get("message", {}).get("content") or first_choice.get("delta", {}).get("content") or ""
+        message = first_choice.get("message", {}) or {}
+        raw_content = message.get("content") or ""
+        reasoning_content = message.get("reasoning_content") or ""
         return {
             "raw_content": raw_content,
-            "model": data.get("model", model_id),
+            "reasoning_content": reasoning_content,
+            "model": data.get("model", server.alias),
             "data": data,
         }
 
 
 class ConversationService:
     def __init__(self) -> None:
-        self.bridge = FoundryPythonBridge()
+        self.bridge = LlamaCppBridge()
         self.state_by_npc: dict[str, NpcConversationState] = {}
 
     def ensure_state(self, npc_id: str) -> NpcConversationState:
@@ -328,7 +438,7 @@ class ConversationService:
     def ensure_ready(self) -> dict[str, str]:
         return {
             role: self.bridge.ensure_model_for_role(role)
-            for role in MODEL_ROLE_PREFERENCES
+            for role in MODEL_ROLE_TO_PROFILE
         }
 
     def append_turn(self, npc_id: str, speaker: str, text: str, guardrail_verdict: str) -> None:
@@ -376,7 +486,7 @@ class ConversationService:
                 ],
                 max_completion_tokens=48,
                 temperature=0.2,
-                timeout_seconds=12,
+                timeout_seconds=60,
             )
             summary = sanitize_model_text(result["raw_content"])
             if summary:
@@ -386,7 +496,7 @@ class ConversationService:
             if assistant_turn:
                 state.hidden_scene_summary = assistant_turn["text"]
 
-    def classify_with_model(self, role: str, system_prompt: str, user_prompt: str, labels: list[str], timeout_seconds: int = 10) -> str | None:
+    def classify_with_model(self, role: str, system_prompt: str, user_prompt: str, labels: list[str], timeout_seconds: int = 30) -> str | None:
         try:
             result = self.bridge.chat_completion(
                 role,
@@ -496,7 +606,7 @@ class ConversationService:
                     messages=messages,
                     max_completion_tokens=80 if simplified_prompt else 120 if route == "slow" else 96,
                     temperature=0.55 if simplified_prompt else 0.65 if route == "slow" else 0.5,
-                    timeout_seconds=24 if route == "slow" else 20,
+                    timeout_seconds=120 if route == "slow" else 90,
                 )
                 cleaned_reply = clean_candidate_reply(result["raw_content"], user_message)
                 candidate_reply = shorten_reply(cleaned_reply, character_ref.definition["fallback_reply"])

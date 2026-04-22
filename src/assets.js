@@ -20,6 +20,8 @@ export function loadSharedAssets() {
 
   k.loadSprite("home-map", "./home.png");
   k.loadSprite("midgard-map", "./midgard.png");
+  k.loadSprite("northmidgard-map", "./northmidgard.png");
+  k.loadSprite("nidavellir-map", "./nidavellir.png");
   k.loadSprite("splash-background", "./splash-background.png");
   k.loadSprite("npc-yrsa", "./femHeroHuman1v2.png", {
     sliceX: 3,
