@@ -11,7 +11,7 @@ export function registerNidavellirScene() {
     boundaryActions: {
       exit: {
         type: "scene",
-        targetScene: "northmidgard",
+        targetScene: "midgard",
         spawnId: "from-nidavellir",
       },
     },

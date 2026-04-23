@@ -1,0 +1,32 @@
+{
+  "entries": [
+    {
+      "id": "fenrirorumor01",
+      "title": "Whispers of Fenrir",
+      "type": "myth_fragment",
+      "topic": "Fenrir",
+      "content": "In the hushed whispers of our home, I have heard tell that a monstrous wolf named Fenrir roams beyond Midgard's borders. His legend speaks of unbreakable chains forged by skilled hands but not even his might can be contained forever.",
+      "source_npc": "Yrsa",
+      "scene": "home",
+      "tags": [
+        "fenrir",
+        "midgard",
+        "myth_fragment"
+      ]
+    },
+    {
+      "id": "relic123",
+      "title": "The Relic of Yggdrasil'thy Roots",
+      "type": "relic_description",
+      "topic": "relics",
+      "content": "In the heart of North Midgard, where Eirik tills his fields under Yggdrasil'thy watchful gaze, there whispers a legend. It is said that beneath its vast roots lies The Relic of Yggdrasil—a sacred artifact with powers beyond mortal ken.",
+      "source_npc": "Eirik",
+      "scene": "midgard",
+      "tags": [
+        "relic_description",
+        "Yggdrasil's roots",
+        "legendary relic"
+      ]
+    }
+  ]
+}

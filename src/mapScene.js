@@ -52,8 +52,8 @@ function pausePlayerInput(player) {
   playIdleAnimation(player);
 }
 
-function resolveBoundaryRect(boundary, boundaryName) {
-  if (boundaryName && Array.isArray(boundary.polygon) && boundary.polygon.length > 0) {
+function resolveBoundaryRect(boundary) {
+  if (Array.isArray(boundary.polygon) && boundary.polygon.length > 0) {
     const xs = boundary.polygon.map((point) => point.x);
     const ys = boundary.polygon.map((point) => point.y);
     const minX = Math.min(...xs);
@@ -69,7 +69,7 @@ function resolveBoundaryRect(boundary, boundaryName) {
     };
   }
 
-  if (boundaryName && Array.isArray(boundary.polyline) && boundary.polyline.length > 0) {
+  if (Array.isArray(boundary.polyline) && boundary.polyline.length > 0) {
     const xs = boundary.polyline.map((point) => point.x);
     const ys = boundary.polyline.map((point) => point.y);
     const minX = Math.min(...xs);
@@ -107,6 +107,7 @@ export function registerMapScene({
     const layers = mapData.layers;
     const heldDirections = new Set();
     const keyboardAbortController = new AbortController();
+    const boundaryAnchors = {};
 
     const map = k.add([k.sprite(mapSprite), k.pos(0), k.scale(scaleFactor)]);
     const player = createPlayer();
@@ -121,7 +122,7 @@ export function registerMapScene({
       if (layer.name === "boundaries") {
         for (const boundary of [...layer.objects, ...extraBoundaries]) {
           const boundaryName = boundary.name?.trim();
-          const rect = resolveBoundaryRect(boundary, boundaryName);
+          const rect = resolveBoundaryRect(boundary);
 
           map.add([
             k.area({
@@ -131,6 +132,10 @@ export function registerMapScene({
             k.pos(rect.x, rect.y),
             boundaryName,
           ]);
+
+          if (boundaryName) {
+            boundaryAnchors[boundaryName] = rect;
+          }
 
           if (!boundaryName) {
             continue;
@@ -201,6 +206,7 @@ export function registerMapScene({
       sceneName,
       player,
       pausePlayerInput: clearMovementState,
+      boundaryAnchors,
     });
 
     addEventListener("keydown", (event) => {

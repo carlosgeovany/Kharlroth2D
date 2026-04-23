@@ -8,6 +8,7 @@ export function registerMidgardScene() {
     customSpawns: {
       "from-home": { x: 1128, y: 558 },
       "from-northmidgard": { x: 1120, y: 120 },
+      "from-nidavellir": { x: 1120, y: 120 },
     },
     boundaryActions: {
       home: {

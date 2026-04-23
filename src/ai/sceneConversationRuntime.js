@@ -30,8 +30,22 @@ function seedGreeting(npc) {
   });
 }
 
-function addNpcSprite(npc) {
+function addNpcSprite(npc, boundaryAnchors) {
   if (!npc.sprite) {
+    return null;
+  }
+
+  const boundaryAnchor = npc.triggerBoundary
+    ? boundaryAnchors[npc.triggerBoundary] ?? null
+    : null;
+  const spriteX = boundaryAnchor
+    ? boundaryAnchor.x + boundaryAnchor.width / 2
+    : npc.x;
+  const spriteY = boundaryAnchor
+    ? boundaryAnchor.y + boundaryAnchor.height / 2
+    : npc.y;
+
+  if (typeof spriteX !== "number" || typeof spriteY !== "number") {
     return null;
   }
 
@@ -41,7 +55,7 @@ function addNpcSprite(npc) {
       shape: new k.Rect(k.vec2(10, 18), 12, 10),
     }),
     k.anchor("center"),
-    k.pos(npc.x * scaleFactor, npc.y * scaleFactor),
+    k.pos(spriteX * scaleFactor, spriteY * scaleFactor),
     k.scale(scaleFactor),
     {
       npcDefinition: npc,
@@ -55,10 +69,15 @@ function addNpcSprite(npc) {
   ]);
 }
 
-export function createSceneConversationRuntime({ sceneName, player, pausePlayerInput }) {
+export function createSceneConversationRuntime({
+  sceneName,
+  player,
+  pausePlayerInput,
+  boundaryAnchors = {},
+}) {
   const sceneNpcs = getSceneNpcs(sceneName);
   const activeSprites = sceneNpcs
-    .map((npc) => addNpcSprite(npc))
+    .map((npc) => addNpcSprite(npc, boundaryAnchors))
     .filter(Boolean);
   let activeNpc = null;
   let dismissedNpcId = null;
