@@ -31,6 +31,10 @@ export function loadSharedAssets() {
     sliceX: 3,
     sliceY: 4,
   });
+  k.loadSprite("npc-styrbjorn", "./$femElderHuman3v2.png", {
+    sliceX: 3,
+    sliceY: 4,
+  });
 
   k.loadSound("bgMusic", "./adventure.mp3");
   k.loadSound("dogBark", "./dog_bark.mp3");

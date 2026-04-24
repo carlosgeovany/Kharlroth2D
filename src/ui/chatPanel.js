@@ -76,7 +76,7 @@ class ChatPanel {
     this.nameEl.textContent = npc.name;
     this.statusEl.textContent = "The hearth is quiet. Ask your question.";
     this.inputEl.value = "";
-    this.inputEl.placeholder = `Ask ${npc.name} something of this place...`;
+    this.inputEl.placeholder = `Ask ${npc.name}...`;
     this.renderTurns(turns, npc.name);
     this.setBusy(false);
     queueMicrotask(() => this.inputEl.focus());

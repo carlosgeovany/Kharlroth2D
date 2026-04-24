@@ -27,6 +27,20 @@
         "Yggdrasil's roots",
         "legendary relic"
       ]
+    },
+    {
+      "id": "nidavellir",
+      "title": "Nidavellir'supreachments Quest for the Rune of Whispers",
+      "type": "location_legend",
+      "topic": "Nidavellir",
+      "content": "In days yore, beneath Midgard’s vast expanse lay secrets untold. The ancient and perilous realm known as Nidavellir beckons those of true heart to seek the Rune of Whispers—a relic said to grant wisdom beyond mortal ken.",
+      "source_npc": "Styrbjorn",
+      "scene": "North Midgard",
+      "tags": [
+        "location_legend",
+        "quest_item",
+        "ancient_realm"
+      ]
     }
   ]
 }

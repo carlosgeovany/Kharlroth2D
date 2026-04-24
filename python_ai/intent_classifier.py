@@ -40,6 +40,9 @@ PLACE_KEYWORDS = {
 
 TOPIC_KEYWORDS = {
     "fenrir": "Fenrir",
+    "rune of whispers": "Rune of Whispers",
+    "whispers": "Rune of Whispers",
+    "rune": "Rune of Whispers",
     "relic": "Relics",
     "relics": "Relics",
     "styrbjorn": "Styrbjorn",
@@ -51,6 +54,12 @@ TOPIC_KEYWORDS = {
     "odin": "Odin",
     "eye of odin": "Eye of Odin",
     "nidhoggr": "Níðhöggr",
+    "nidavellir": "Nidavellir",
+    "jotunheim": "Jotunheim",
+    "realms": "Realms",
+    "realm": "Realms",
+    "dwarves": "Nidavellir",
+    "dwarf": "Nidavellir",
     "fear": "Fear",
     "shadow": "Fenrir",
 }
@@ -189,7 +198,7 @@ def apply_intent_overrides(classification: IntentClassification, user_message: s
         classification.confidence = max(classification.confidence, 0.97)
         return classification
 
-    if re.search(r"\bwhat do you know about\b|\btell me about\b|\bwhat is fenrir\b|\bwhat are relics\b|\brelics\b|\bfenrir\b|\byggdrasil\b|\beye of odin\b|\bnidhoggr\b", lowered):
+    if re.search(r"\bwhat do you know about\b|\btell me about\b|\bwhat is fenrir\b|\bwhat are relics\b|\brelics\b|\bfenrir\b|\byggdrasil\b|\beye of odin\b|\bnidhoggr\b|\bnidavellir\b|\brune of whispers\b|\bfirst relic\b|\brealms\b|\bjotunheim\b|\bdwarves\b", lowered):
         classification.intent = "ask_lore"
         classification.confidence = max(classification.confidence, 0.96)
         return classification
@@ -210,7 +219,7 @@ def fallback_classify_intent(user_message: str) -> IntentClassification:
         intent = "ask_direction"
     elif re.search(r"\bwhat should i do\b|\bwhat now\b|\bnext\b|\bhelp\b|\bguide\b", lowered):
         intent = "ask_quest_guidance"
-    elif re.search(r"\bwhat is\b|\btell me about\b|\blegend\b|\bmyth\b|\brumor\b|\brelic\b|\bfenrir\b|\byggdrasil\b|\bodin\b", lowered):
+    elif re.search(r"\bwhat is\b|\btell me about\b|\blegend\b|\bmyth\b|\brumor\b|\brelic\b|\bfenrir\b|\byggdrasil\b|\bodin\b|\bnidavellir\b|\brune of whispers\b|\brealm\b|\bjotunheim\b|\bdwarf\b", lowered):
         intent = "ask_lore"
     elif re.search(r"\bwhere are we\b|\bwhat is happening\b|\bwhat is wrong\b|\bwho lives\b|\bwhat's this place\b", lowered):
         intent = "ask_world_info"

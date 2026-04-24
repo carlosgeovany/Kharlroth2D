@@ -112,6 +112,7 @@ Active AI characters:
 
 - `Yrsa` in `home`, bound to the `Yrsa` map boundary
 - `Eirik` in `midgard`, bound to the `eirik` map boundary
+- `Styrbjorn` in `northmidgard`, bound to the `Styrbjorn` map boundary
 
 High-level AI chat pipeline:
 

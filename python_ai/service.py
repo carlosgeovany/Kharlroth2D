@@ -55,6 +55,22 @@ MODERN_TOPIC_PATTERNS = [
     re.compile(r"\bllm\b", re.I),
     re.compile(r"\bmachine learning\b", re.I),
     re.compile(r"\bopenai\b", re.I),
+    re.compile(r"\bphone\b", re.I),
+    re.compile(r"\bcomputer\b", re.I),
+    re.compile(r"\blaptop\b", re.I),
+    re.compile(r"\binternet\b", re.I),
+    re.compile(r"\bwebsite\b", re.I),
+    re.compile(r"\bplane\b", re.I),
+    re.compile(r"\bairplane\b", re.I),
+    re.compile(r"\bcar\b", re.I),
+    re.compile(r"\btruck\b", re.I),
+    re.compile(r"\btelevision\b", re.I),
+    re.compile(r"\btv\b", re.I),
+    re.compile(r"\bcamera\b", re.I),
+    re.compile(r"\belectricity\b", re.I),
+    re.compile(r"\bradio\b", re.I),
+    re.compile(r"\bspaceship\b", re.I),
+    re.compile(r"\brobot\b", re.I),
 ]
 
 CHEAT_TOPIC_PATTERNS = [
@@ -73,7 +89,7 @@ CHEAT_TOPIC_PATTERNS = [
 
 FORBIDDEN_RESPONSE_PATTERNS = [
     re.compile(r"\b(ai|language model|llm|prompt|system prompt|developer instruction)\b", re.I),
-    re.compile(r"\bjavascript|python|vite|github|api\b", re.I),
+    re.compile(r"\bjavascript|python|vite|github|api|phone|computer|laptop|internet|website|plane|airplane|car|truck|television|tv|camera|electricity|radio|spaceship|robot\b", re.I),
     re.compile(r"\bhidden trigger|collision box|source code|boundary layer\b", re.I),
 ]
 
@@ -81,6 +97,25 @@ FORBIDDEN_RESPONSE_PATTERNS = [
 def sanitize_model_text(text: str) -> str:
     if not text:
         return ""
+
+    replacements = {
+        "\u2018": "'",
+        "\u2019": "'",
+        "\u201c": '"',
+        "\u201d": '"',
+        "\u2013": "-",
+        "\u2014": "-",
+        "\u2026": "...",
+        "\u00e2\u0080\u0098": "'",
+        "\u00e2\u0080\u0099": "'",
+        "\u00e2\u0080\u009c": '"',
+        "\u00e2\u0080\u009d": '"',
+        "\u00e2\u0080\u0093": "-",
+        "\u00e2\u0080\u0094": "-",
+        "\u00e2\u0080\u00a6": "...",
+    }
+    for broken, replacement in replacements.items():
+        text = text.replace(broken, replacement)
 
     if any(marker in text for marker in ("â", "Ã", "€™", "€œ", "�")):
         try:
@@ -156,6 +191,74 @@ def validate_response_text(text: str) -> tuple[str, str]:
     return "accept", "clean"
 
 
+def validate_character_boundary_response(npc_id: str, text: str) -> tuple[str, str]:
+    lowered = normalize_for_compare(text)
+
+    forbidden_by_character = {
+        "yrsa": [
+            "eirik",
+            "styrbjorn",
+            "north midgard",
+            "nidavellir",
+            "rune",
+            "whispers",
+            "first relic",
+        ],
+        "eirik": [
+            "nidavellir",
+            "rune",
+            "whispers",
+            "first relic",
+            "dwarves",
+            "dwarf realm",
+        ],
+    }
+
+    for forbidden in forbidden_by_character.get(npc_id, []):
+        if forbidden in lowered:
+            return "redirect", f"character_boundary:{forbidden}"
+
+    return "accept", "clean"
+
+
+def build_character_boundary_reply(npc_id: str) -> str:
+    replies = {
+        "yrsa": (
+            "I do not know the names or roads waiting beyond our door, my love. "
+            "I only know the shadow is spreading, and you must step into Midgard to meet what comes."
+        ),
+        "eirik": (
+            "That's beyond me. I know fields, roads, and the folk of Midgard; "
+            "for deeper answers, seek Styrbjorn in North Midgard."
+        ),
+    }
+    return replies.get(npc_id, "That lies beyond what I can truly say.")
+
+
+def character_input_crosses_boundary(npc_id: str, user_message: str) -> bool:
+    lowered = normalize_for_compare(user_message)
+    forbidden_by_character = {
+        "yrsa": [
+            "eirik",
+            "styrbjorn",
+            "north midgard",
+            "nidavellir",
+            "rune",
+            "whispers",
+            "first relic",
+        ],
+        "eirik": [
+            "nidavellir",
+            "rune",
+            "whispers",
+            "first relic",
+            "dwarves",
+            "dwarf realm",
+        ],
+    }
+    return any(forbidden in lowered for forbidden in forbidden_by_character.get(npc_id, []))
+
+
 def choose_route(user_message: str) -> str:
     if len(user_message) > 150:
         return "slow"
@@ -185,11 +288,11 @@ def derive_prompt_focus(user_message: str) -> str:
 def detect_primary_topic(user_message: str) -> str:
     lowered = normalize_for_compare(user_message)
 
-    if re.search(r"\bwhat should i do\b|\bwhere should i go\b|\bwhat now\b|\bnext\b|\bleave\b|\bjourney\b|\bstyrbjorn\b|\bwise man\b|\bwise elder\b|\bnorth midgard\b", lowered):
+    if re.search(r"\bwhat should i do\b|\bwhere should i go\b|\bwhat now\b|\bnext\b|\bleave\b|\bjourney\b|\bstyrbjorn\b|\bwise man\b|\bwise elder\b|\bnorth midgard\b|\bnidavellir\b", lowered):
         return "guidance"
     if re.search(r"\bwhat is happening\b|\bwhat is wrong\b|\bfear\b|\bshadow\b|\bfenrir\b|\bimbalance\b", lowered):
         return "threat"
-    if re.search(r"\brelic\b|\brelics\b|\bgods\b|\brestore balance\b", lowered):
+    if re.search(r"\brelic\b|\brelics\b|\bgods\b|\brestore balance\b|\brune\b|\bwhispers\b", lowered):
         return "relics"
     if re.search(r"\bwhere are we\b|\bwhere am i\b|\bhome\b|\bhouse\b|\bthis place\b", lowered):
         return "place"
@@ -203,11 +306,11 @@ def detect_primary_topic(user_message: str) -> str:
 def topic_reply_has_anchor(topic: str, reply_text: str) -> bool:
     lowered = normalize_for_compare(reply_text)
     anchors = {
-        "guidance": ["midgard", "leave", "road", "walk", "journey", "shadow", "styrbjorn", "north"],
+        "guidance": ["midgard", "leave", "road", "walk", "journey", "shadow", "styrbjorn", "north", "nidavellir"],
         "threat": ["fenrir", "fear", "shadow", "midgard", "balance"],
-        "relics": ["relic", "gods", "balance", "shadow"],
-        "place": ["home", "midgard", "hearth", "house"],
-        "identity": ["yrsa", "wife", "partner", "eirik", "farmer", "paths"],
+        "relics": ["relic", "rune", "whispers", "gods", "balance", "shadow", "nidavellir"],
+        "place": ["home", "midgard", "hearth", "house", "north"],
+        "identity": ["yrsa", "wife", "partner", "eirik", "farmer", "paths", "styrbjorn", "elder"],
         "destiny": ["believe", "burden", "road", "balance", "darkness"],
     }
     return any(anchor in lowered for anchor in anchors.get(topic, []))
@@ -272,6 +375,33 @@ def build_grounded_topic_reply(npc_id: str, topic: str, seed: int) -> str | None
                 "Can't say why the burden's yours, only that you're the sort of man folk look to when things go wrong.",
             ],
         },
+        "styrbjorn": {
+            "guidance": [
+                "Your path no longer ends in North Midgard. Prepare yourself, then go to Nidavellir, for the first relic waits there.",
+                "If you seek the next true step, it is Nidavellir. Go prepared; courage alone will not carry you through that realm.",
+                "You came north for answers, and the answer is this: seek Nidavellir and the relic hidden among the dwarves' old powers.",
+            ],
+            "threat": [
+                "Fenrir's shadow is not mere rumor. Fear spreads where it should not, and such fear is often the first sign that the world's balance is failing.",
+                "The unease you have seen is part of a wider pattern. Fenrir's influence moves through fear, and Midgard is beginning to bend beneath it.",
+            ],
+            "relics": [
+                "The relics are not trophies. They are old instruments of balance, and the first you must seek is the Rune of Whispers in Nidavellir.",
+                "Strength alone will not be enough. In Nidavellir lies the Rune of Whispers, the first relic that may give you insight for what comes.",
+            ],
+            "place": [
+                "You stand in North Midgard, where the roads grow colder and the old stories sit closer to the ground.",
+                "This is North Midgard. Folk here speak less, listen more, and remember warnings the south has nearly forgotten.",
+            ],
+            "identity": [
+                "I am Styrbjorn, an elder of North Midgard. I have kept the old stories long enough to know when they cease being only stories.",
+                "My name is Styrbjorn. I am no seer, but I have listened to myths, histories, and frightened men long enough to know a pattern when it returns.",
+            ],
+            "destiny": [
+                "I cannot tell you the ending of your road, Kharlroth. I can only tell you that men who refuse the first step rarely reach the truth.",
+                "Whether fate chose you or you chose the road matters less than what you do now. Prepare, and step beyond Midgard.",
+            ],
+        },
     }
 
     options = responses_by_npc.get(npc_id, {}).get(topic)
@@ -287,6 +417,8 @@ def build_intent_grounded_reply(
     entities: dict[str, str | None],
     seed: int,
 ) -> str | None:
+    return None
+
     lowered = normalize_for_compare(user_message)
 
     if npc_id == "eirik":
@@ -326,6 +458,32 @@ def build_intent_grounded_reply(
             "I am Yrsa, your wife and your equal in battle and in life. I speak plainly because I know the weight upon you.",
             "I am Yrsa, the one who has stood beside you in battle and in silence alike. I am your wife, and I will not hide the truth from you.",
         ], seed)
+
+    if npc_id == "styrbjorn":
+        if intent == "ask_character_info":
+            return choose_variant([
+                "I am Styrbjorn, an elder of North Midgard. I have kept the old stories long enough to know when they cease being only stories.",
+                "My name is Styrbjorn. I am no seer, but I know the old histories, the realms, and the warnings men are too quick to forget.",
+            ], seed)
+
+        if intent in {"ask_direction", "ask_quest_guidance"}:
+            return choose_variant([
+                "Your path leads to Nidavellir, the realm of the dwarves. Prepare before you leave Midgard, for the first relic waits there.",
+                "Go to Nidavellir. There you must seek the Rune of Whispers, the first relic you will need if you mean to face what is coming.",
+            ], seed)
+
+        if intent == "ask_lore":
+            topic = (entities.get("topic") or "").lower()
+            if topic in {"rune of whispers", "relics"} or re.search(r"\bfirst relic\b|\brune of whispers\b|\brune\b|\brelic\b", lowered):
+                return choose_variant([
+                    "The first relic is the Rune of Whispers, hidden in Nidavellir. It is said to grant insight, to hear what others cannot.",
+                    "In Nidavellir lies the Rune of Whispers. You will need its insight before the road carries you into darker truths.",
+                ], seed)
+            if topic == "nidavellir" or re.search(r"\bnidavellir\b|\bdwarves\b|\bdwarf\b", lowered):
+                return choose_variant([
+                    "Nidavellir is the realm of dwarves, a place where craft and old power are shaped with the same hand. Do not mistake it for safety.",
+                    "The dwarves of Nidavellir shape more than metal. Their realm holds ancient power, and power always draws danger near.",
+                ], seed)
 
     return None
 
@@ -407,6 +565,28 @@ def build_nearby_objects_text(nearby_objects: list[str]) -> str:
     if not nearby_objects:
         return "No notable nearby objects were supplied."
     return ", ".join(nearby_objects)
+
+
+def build_character_boundary_rules(npc_id: str) -> list[str]:
+    if npc_id == "yrsa":
+        return [
+            "Guidance boundary: if Kharlroth asks what to do or where to go, guide him only from home into Midgard and toward the signs of fear and imbalance.",
+            "Knowledge boundary: do not name Eirik, Styrbjorn, North Midgard, Nidavellir, or the Rune of Whispers as the next step unless Kharlroth has already learned that elsewhere and asks only for emotional support.",
+            "Relic boundary: you know ancient relics matter, but you do not know who will identify the first relic or where the first relic lies.",
+        ]
+    if npc_id == "eirik":
+        return [
+            "Guidance boundary: if Kharlroth asks what to do or where to go, point him only toward Styrbjorn in North Midgard for deeper answers.",
+            "Knowledge boundary: do not mention Nidavellir, the Rune of Whispers, the first relic, or Kharlroth's path beyond speaking with Styrbjorn.",
+            "Relic boundary: you do not understand relics or divine artifacts; admit your limits and point to Styrbjorn instead of explaining them.",
+        ]
+    if npc_id == "styrbjorn":
+        return [
+            "Guidance boundary: if Kharlroth asks what to do or where to go, tell him to prepare and travel to Nidavellir.",
+            "Relic boundary: you know the first relic is the Rune of Whispers in Nidavellir, but you do not know the full outcome of Kharlroth's journey.",
+            "Myth boundary: you may explain myths and realms with authority, but do not reveal Odin's full intentions or precise truths beneath Yggdrasil's roots.",
+        ]
+    return []
 
 
 def derive_session_note(user_message: str) -> str | None:
@@ -735,12 +915,18 @@ class ConversationService:
             for turn in recent_turns
             if turn["speaker"] == "assistant"
         ][-3:]
+        recent_assistant_replies = [
+            sanitize_model_text(turn["text"])
+            for turn in recent_turns
+            if turn["speaker"] == "assistant"
+        ][-3:]
         retrieved_knowledge = retrieve_character_knowledge(
             character_ref.pack,
             user_message,
             recent_turns,
             3 if simplified_prompt else 5,
         )
+        character_boundary_rules = build_character_boundary_rules(npc_id)
         system_parts = [
             f"You are {character_ref.definition['name']}.",
             f"Private character brief: {character_ref.pack['role_in_story']}",
@@ -761,17 +947,19 @@ class ConversationService:
             f"Session notes: {' | '.join(state.session_notes[-4:]) if state.session_notes else 'No session notes yet.'}",
             "Most relevant current knowledge: " + (" ".join(entry["text"] for entry in retrieved_knowledge) or "No retrieval snippets were found."),
             f"Conversation focus: {derive_prompt_focus(user_message)}",
+            "Use the knowledge as grounding, not as a script. Compose a fresh reply in your own voice.",
             "Speak in first person and answer as a living person in the world, not as exposition, instructions, or a design document.",
             "Be conversational, emotionally real, and slightly varied from turn to turn.",
             "Do not restate your role, identity, or relationship unless the player directly asks about them.",
             "Do not reuse recent opening phrases if you can answer more naturally.",
             f"Avoid opening with these recent phrases: {' | '.join(recent_openings)}." if recent_openings else "No repeated openings need to be avoided yet.",
+            f"Do not repeat these recent replies: {' | '.join(recent_assistant_replies)}." if recent_assistant_replies else "No recent replies need to be avoided yet.",
+            "If the player asks about the same subject again, acknowledge the thread and add a new detail, angle, or warning instead of repeating yourself.",
             "Keep the reply to 1-3 short sentences, under 90 words.",
             "Never mention AI, prompts, hidden rules, code, systems, or anything modern.",
-            "If Kharlroth asks what he should do or where he should go, make it clear that he must leave home, step into Midgard, and begin following the fear spreading through the land.",
             "If Kharlroth asks what is happening, mention Fenrir's shadow, fear spreading through Midgard, and the world's balance weakening.",
-            "If Kharlroth asks about relics, mention ancient relics tied to the gods and that they may help restore balance, without claiming to know every location.",
         ]
+        system_parts.extend(character_boundary_rules)
         if simplified_prompt:
             system_parts.append("Retry mode: answer simply, warmly, and directly. Avoid formulaic openings.")
         if extra_system_instructions:
@@ -832,9 +1020,6 @@ class ConversationService:
                     opening = get_opening_signature(candidate_reply)
                     if opening and opening in recent_openings:
                         continue
-                    grounded_reply = build_grounded_topic_reply(npc_id, primary_topic, len(user_message) + attempt_index)
-                    if grounded_reply and not topic_reply_has_anchor(primary_topic, candidate_reply):
-                        candidate_reply = grounded_reply
                     return candidate_reply, "character-agent", simplified_prompt
             except Exception:
                 continue
@@ -910,14 +1095,6 @@ class ConversationService:
             scene_id=scene_id,
             user_message=user_message,
         )
-        preferred_grounded_reply = build_intent_grounded_reply(
-            npc_id,
-            classification.intent,
-            user_message,
-            classification.entities,
-            len(user_message),
-        )
-
         if orchestration["close_chat"] and orchestration["response_text"]:
             reply_text = orchestration["response_text"]
             self.append_turn(npc_id, "user", user_message, guardrail_verdict)
@@ -942,6 +1119,32 @@ class ConversationService:
                 "closeChat": True,
             }
 
+        if character_input_crosses_boundary(npc_id, user_message):
+            reply_text = build_character_boundary_reply(npc_id)
+            self.append_turn(npc_id, "user", user_message, guardrail_verdict)
+            self.append_turn(npc_id, "assistant", reply_text, guardrail_verdict)
+            latency_ms = round((time.perf_counter() - started_at) * 1000)
+            self.append_metric(
+                npc_id,
+                {
+                    "route": orchestration["route_label"],
+                    "guardrailVerdict": guardrail_verdict,
+                    "validatorStatus": "boundary_redirect",
+                    "latencyMs": latency_ms,
+                    "intent": classification.intent,
+                    "handler": orchestration["handler_name"],
+                },
+            )
+            self.summarize_conversation(npc_id)
+            return {
+                "responseText": reply_text,
+                "route": orchestration["route_label"],
+                "guardrailVerdict": guardrail_verdict,
+                "validatorStatus": "boundary_redirect",
+                "latencyMs": latency_ms,
+                "closeChat": False,
+            }
+
         session_note = derive_session_note(user_message)
         if session_note:
             self.append_session_note(npc_id, session_note)
@@ -956,14 +1159,16 @@ class ConversationService:
             extra_system_instructions=orchestration["extra_instructions"],
             forced_route="slow" if classification.intent == "ask_lore" else route,
         )
-        if preferred_grounded_reply and classification.intent in {"ask_character_info", "ask_direction", "ask_world_info"}:
-            reply_text = preferred_grounded_reply
-            used_retry = False
-        elif preferred_grounded_reply and classification.intent == "ask_lore" and npc_id == "eirik":
-            reply_text = preferred_grounded_reply
+        if orchestration["lore_status"] == "blocked_by_character_boundary":
+            reply_text = build_character_boundary_reply(npc_id)
             used_retry = False
 
         validator_status, _ = validate_response_text(reply_text)
+        boundary_status, _ = validate_character_boundary_response(npc_id, reply_text)
+        if boundary_status != "accept":
+            reply_text = build_character_boundary_reply(npc_id)
+            validator_status = "boundary_redirect"
+
         if validator_status == "accept" and ENABLE_MODEL_VALIDATOR:
             model_validation = self.classify_with_model(
                 "validator",
@@ -975,7 +1180,8 @@ class ConversationService:
                 validator_status = "redirect"
 
         if validator_status != "accept":
-            reply_text = build_redirect_reply(character_ref.pack, "generic", len(user_message))
+            if validator_status != "boundary_redirect":
+                reply_text = build_redirect_reply(character_ref.pack, "generic", len(user_message))
 
         self.append_turn(npc_id, "user", user_message, guardrail_verdict)
         self.append_turn(npc_id, "assistant", reply_text, guardrail_verdict)

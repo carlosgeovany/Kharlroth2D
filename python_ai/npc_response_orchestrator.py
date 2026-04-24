@@ -5,6 +5,40 @@ from typing import Any
 from .debug_logger import log_event
 
 
+def character_can_receive_lore(npc_id: str, topic: str | None, user_message: str) -> bool:
+    lowered = f"{topic or ''} {user_message}".lower()
+
+    if npc_id == "yrsa":
+        forbidden_terms = (
+            "eirik",
+            "styrbjorn",
+            "north midgard",
+            "nidavellir",
+            "rune of whispers",
+            "first relic",
+            "dwarf",
+            "dwarves",
+        )
+        return not any(term in lowered for term in forbidden_terms)
+
+    if npc_id == "eirik":
+        forbidden_terms = (
+            "nidavellir",
+            "rune of whispers",
+            "first relic",
+            "dwarf",
+            "dwarves",
+            "relic",
+            "relics",
+            "yggdrasil",
+            "odin",
+            "nidhoggr",
+        )
+        return not any(term in lowered for term in forbidden_terms)
+
+    return True
+
+
 class NpcResponseOrchestrator:
     def __init__(self, intent_router: Any, lore_manager: Any) -> None:
         self.intent_router = intent_router
@@ -55,11 +89,12 @@ class NpcResponseOrchestrator:
                 "If the question is vague, answer what the NPC can honestly say and gently steer toward known topics."
             )
         elif route.handler_name == "handle_goodbye":
-            farewell = (
-                "Walk steady, then. If the road troubles you again, come back and ask."
-                if npc_id == "eirik"
-                else "Go with care, my love. The hearth will remember your steps."
-            )
+            farewells = {
+                "eirik": "Walk steady, then. If the road troubles you again, come back and ask.",
+                "styrbjorn": "Go prepared, Kharlroth. The old stories favor no man who walks blindly.",
+                "yrsa": "Go with care, my love. The hearth will remember your steps.",
+            }
+            farewell = farewells.get(npc_id, "Go carefully. The road remembers every step.")
             return {
                 "handler_name": route.handler_name,
                 "close_chat": True,
@@ -70,7 +105,7 @@ class NpcResponseOrchestrator:
                 "lore_status": None,
             }
 
-        if route.use_lore:
+        if route.use_lore and character_can_receive_lore(npc_id, topic, user_message):
             resolved_topic = topic or "Midgard"
             lore_entry, lore_status = self.lore_manager.resolve_lore(
                 topic=resolved_topic,
@@ -92,6 +127,20 @@ class NpcResponseOrchestrator:
             if npc_id == "yrsa":
                 extra_instructions.append(
                     "You may speak of Fenrir, fear, relics, and imbalance with confidence, but do not reveal exact relic locations or deeper hidden truths you do not know."
+                )
+            if npc_id == "styrbjorn":
+                extra_instructions.append(
+                    "You are a learned elder, not a mystic. You may explain myths, realms, relics, Fenrir's shadow, Nidavellir, and the Rune of Whispers with authority, but do not reveal Odin's full intentions, the journey's outcome, or precise truths beneath Yggdrasil's roots."
+                )
+        elif route.use_lore:
+            lore_status = "blocked_by_character_boundary"
+            if npc_id == "yrsa":
+                extra_instructions.append(
+                    "Do not answer this as factual lore. You do not know that specific person, place, relic, or next-step detail. Admit the limit gently and bring the conversation back to home, Midgard, Fenrir's shadow, or the need to begin the journey."
+                )
+            elif npc_id == "eirik":
+                extra_instructions.append(
+                    "Do not answer this as factual lore. You are a farmer and do not know this deeper myth, relic, or realm detail. Admit your limit plainly and point Kharlroth toward Styrbjorn in North Midgard."
                 )
 
         log_event("npc_response_orchestrator", {

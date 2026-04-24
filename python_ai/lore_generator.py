@@ -24,6 +24,7 @@ CANON_CONSTRAINTS = [
     "Kharlroth must recover relics.",
     "Eirik is a farmer.",
     "Styrbjorn is a wise elder in North Midgard.",
+    "Styrbjorn sends Kharlroth toward Nidavellir to seek the Rune of Whispers as the first relic.",
     "The Eye of Odin is in Yggdrasil's roots guarded by Níðhöggr.",
 ]
 
@@ -50,9 +51,9 @@ def _extract_json_object(text: str) -> dict[str, Any] | None:
 
 def infer_lore_type(topic: str | None, npc_id: str, user_message: str) -> str:
     lowered = (f"{topic or ''} {user_message}").lower()
-    if "relic" in lowered or "eye of odin" in lowered:
+    if "relic" in lowered or "eye of odin" in lowered or "rune of whispers" in lowered or "rune" in lowered:
         return "relic_description"
-    if "where" in lowered or "place" in lowered or "north midgard" in lowered or "yggdrasil" in lowered:
+    if "where" in lowered or "place" in lowered or "north midgard" in lowered or "nidavellir" in lowered or "yggdrasil" in lowered:
         return "location_legend"
     if any(name in lowered for name in ("yrsa", "eirik", "styrbjorn")):
         return "character_rumor"

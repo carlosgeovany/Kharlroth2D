@@ -14,6 +14,10 @@ function buildNearbyObjects(sceneName, npcId) {
     return ["house path", "lake", "ridge", "cave", "open field"];
   }
 
+  if (sceneName === "northmidgard" && npcId === "styrbjorn") {
+    return ["northern road", "cold woods", "stone paths", "way toward Nidavellir"];
+  }
+
   return [];
 }
 
@@ -132,7 +136,7 @@ export function createSceneConversationRuntime({
         return;
       }
 
-      chatPanel.setStatus("Speak plainly. Keep to this world and its age.");
+      chatPanel.setStatus("Speak plainly....");
     } catch {
       const fallbackTurn = {
         speaker: "assistant",
@@ -162,7 +166,7 @@ export function createSceneConversationRuntime({
     conversationOrchestrator.ensureReady()
       .then(() => {
         if (activeNpc?.id === npc.id) {
-          chatPanel.setStatus("Speak plainly. Keep to this world and its age.");
+          chatPanel.setStatus("Speak plainly....");
         }
       })
       .catch(() => {
