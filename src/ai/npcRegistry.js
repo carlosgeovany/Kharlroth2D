@@ -68,8 +68,6 @@ export const npcRegistry = [
     name: "Styrbjorn",
     scene: "northmidgard",
     triggerBoundary: "Styrbjorn",
-    sprite: "npc-styrbjorn",
-    frame: 7,
     greeting: "So... you made the journey north. That alone tells me you are not like the others. Speak, Kharlroth. What truth are you seeking?",
     fallbackReply: "The old tales do not answer all things at once. Ask me of Fenrir, the realms, relics, or the road to Nidavellir.",
     tone: "Wise, patient, reflective, calm, and direct when truth requires it.",
