@@ -1,24 +1,38 @@
 # Kharlroth2D
 
-Kharlroth2D is a browser RPG prototype built with Vite and Kaboom.  
-The frontend runs the maps, movement, scene transitions, and UI.  
-The NPC intelligence runs through a local Python backend that talks to Ollama on your own machine.
+Kharlroth2D is a local-first browser RPG prototype built with Vite and Kaboom.
+
+The frontend runs the maps, movement, scene transitions, welcome screen, music, and chat UI. The NPC intelligence runs through a local Python backend that talks to Ollama on your own machine.
 
 ## Run The Game
 
 Requirements:
 
 - Node.js + npm
-- Python
+- Python with the packages in `requirements.txt`
 - Ollama installed and running locally
-- Local Ollama models:
+- Ollama models:
   - `phi3.5` for character responses and lore generation
   - `qwen2.5:1.5b` for intent classification and light utility tasks
 
-Install frontend dependencies:
+Install dependencies:
 
 ```bash
 npm install
+python -m pip install -r requirements.txt
+```
+
+Start Ollama if it is not already running:
+
+```bash
+ollama serve
+```
+
+Install the local models if needed:
+
+```bash
+ollama pull phi3.5
+ollama pull qwen2.5:1.5b
 ```
 
 Start the AI backend:
@@ -27,10 +41,10 @@ Start the AI backend:
 npm run ai:dev
 ```
 
-Start the game:
+Start the game on the port used during local testing:
 
 ```bash
-npm run dev
+npm run dev -- --host 127.0.0.1 --port 4173
 ```
 
 Open:
@@ -39,34 +53,107 @@ Open:
 http://127.0.0.1:4173
 ```
 
+If you run only `npm run dev`, Vite may use its default port instead. Use the URL printed in that terminal.
+
 ## Build
 
 ```bash
 npm run build
 ```
 
+## Current Scenes
+
+Registered playable scenes:
+
+- `welcome`
+- `home`
+- `midgard`
+- `northmidgard`
+- `nidavellir`
+
+Current main navigation flow:
+
+```text
+welcome -> home -> midgard -> northmidgard -> nidavellir
+```
+
+Current return flow:
+
+```text
+nidavellir -> midgard
+northmidgard -> midgard
+midgard -> home
+```
+
+Current map data files:
+
+- `public/home.json`
+- `public/midgard.json`
+- `public/northmidgard.json`
+- `public/nidavellir.json`
+- `public/jormungandr.json`
+
+`jormungandr.json` is present as map data, but it is not registered as a playable scene yet.
+
 ## AI Architecture
 
-The game uses a local-first dialogue pipeline in `python_ai/`.
+The game uses a local Python dialogue pipeline in `python_ai/`. The browser talks to this backend through the Vite proxy at `/api/ai`.
 
-### Main pieces
+Main pieces:
 
-- [app.py](/c:/Users/cgp23004/OneDrive%20-%20University%20of%20Connecticut/Documents/KharlrothGame/Kharlroth2D/python_ai/app.py)
-  FastAPI entrypoint for `/api/ai/ready` and `/api/ai/chat`
-- [service.py](/c:/Users/cgp23004/OneDrive%20-%20University%20of%20Connecticut/Documents/KharlrothGame/Kharlroth2D/python_ai/service.py)
-  Main conversation service, Ollama bridge, state tracking, and pipeline integration
-- [character_data.py](/c:/Users/cgp23004/OneDrive%20-%20University%20of%20Connecticut/Documents/KharlrothGame/Kharlroth2D/python_ai/character_data.py)
-  Character specs and RAG-style retrieval packs for major NPCs
+- `python_ai/app.py`: FastAPI entrypoint for `/api/ai/health`, `/api/ai/ready`, and `/api/ai/chat`
+- `python_ai/service.py`: conversation service, Ollama bridge, state tracking, guardrails, and pipeline integration
+- `python_ai/character_data.py`: character specs and RAG-style retrieval packs for major NPCs
+- `src/ai/conversationOrchestrator.js`: browser-side client for the Python backend
+- `src/ai/sceneConversationRuntime.js`: scene chat wiring and NPC contact behavior
+- `src/ai/npcRegistry.js`: frontend NPC placement and trigger metadata
 
-### Intent system
+Active AI characters:
 
-The backend now classifies player intent before generating a reply.
+- `Yrsa` in `home`, bound to the `Yrsa` map boundary
+- `Eirik` in `midgard`, bound to the `eirik` map boundary
+
+High-level AI chat pipeline:
+
+```mermaid
+flowchart LR
+    A["Player Message"] --> B["Guardrails"]
+    B --> C["Intent Agent"]
+
+    C --> D["NPC Character Agent"]
+    K["Character Grounding"] --> D
+
+    C --> E["Lore Agent"]
+    E --> F["Persistent Lore Store"]
+    F --> D
+
+    D --> G["Response Validator"]
+    G --> H["Conversation Memory"]
+    H --> I["NPC Reply"]
+```
+
+Pipeline steps:
+
+- `Player Message`: the player types a message in the NPC chat window.
+- `Guardrails`: the system checks for modern topics, cheating, prompt injection, or hidden-system requests.
+- `Intent Agent`: the message is classified into a purpose, such as lore, directions, quest guidance, small talk, or goodbye.
+- `Character Grounding`: each NPC has private grounding that defines who they are, what they know, what they do not know, and how they speak.
+- `NPC Character Agent`: the response is generated in the selected character's voice using the current scene, intent, memory, and grounding.
+- `Lore Agent`: lore questions are routed through a lore system so the game can reuse known lore or generate new lore only when needed.
+- `Persistent Lore Store`: generated lore is saved so future conversations stay consistent.
+- `Response Validator`: the reply is checked before display to keep it safe, in-world, and character-appropriate.
+- `Conversation Memory`: recent turns are stored so the NPC can keep context during the current session.
+- `NPC Reply`: the final response appears in the chat window.
+
+## Intent System
+
+Every player message is classified before an NPC response is generated.
 
 Modules:
 
-- [intent_classifier.py](/c:/Users/cgp23004/OneDrive%20-%20University%20of%20Connecticut/Documents/KharlrothGame/Kharlroth2D/python_ai/intent_classifier.py)
-- [intent_router.py](/c:/Users/cgp23004/OneDrive%20-%20University%20of%20Connecticut/Documents/KharlrothGame/Kharlroth2D/python_ai/intent_router.py)
-- [npc_response_orchestrator.py](/c:/Users/cgp23004/OneDrive%20-%20University%20of%20Connecticut/Documents/KharlrothGame/Kharlroth2D/python_ai/npc_response_orchestrator.py)
+- `python_ai/intent_classifier.py`
+- `python_ai/intent_router.py`
+- `python_ai/npc_response_orchestrator.py`
 
 Supported intents:
 
@@ -85,11 +172,12 @@ Intent flow:
 2. Regex guardrails run first
 3. `IntentClassifier` asks Ollama for strict JSON intent output
 4. JSON is validated
-5. If invalid, classifier retries once
-6. If still invalid, fallback keyword rules classify the message
-7. `IntentRouter` maps the intent to the correct handler
-8. `NpcResponseOrchestrator` adds the right response focus and lore requirements
-9. Character response is generated with character spec + scene context + optional lore
+5. If invalid, the classifier retries once
+6. If still invalid, keyword rules classify the message
+7. Local overrides correct obvious cases like `who are you?`, `where should I go?`, and `do you know a wise man?`
+8. `IntentRouter` maps the intent to the correct handler
+9. `NpcResponseOrchestrator` adds response focus and lore requirements
+10. The character reply is generated from character spec, scene context, recent memory, intent, and optional lore
 
 Example classifier output:
 
@@ -107,18 +195,18 @@ Example classifier output:
 
 ## Dynamic Lore System
 
-Lore is generated only when needed and then reused consistently.
+Lore is generated only when needed, stored, and reused across later conversations.
 
 Modules:
 
-- [lore_store.py](/c:/Users/cgp23004/OneDrive%20-%20University%20of%20Connecticut/Documents/KharlrothGame/Kharlroth2D/python_ai/lore_store.py)
-- [lore_retriever.py](/c:/Users/cgp23004/OneDrive%20-%20University%20of%20Connecticut/Documents/KharlrothGame/Kharlroth2D/python_ai/lore_retriever.py)
-- [lore_generator.py](/c:/Users/cgp23004/OneDrive%20-%20University%20of%20Connecticut/Documents/KharlrothGame/Kharlroth2D/python_ai/lore_generator.py)
-- [lore_manager.py](/c:/Users/cgp23004/OneDrive%20-%20University%20of%20Connecticut/Documents/KharlrothGame/Kharlroth2D/python_ai/lore_manager.py)
+- `python_ai/lore_store.py`
+- `python_ai/lore_retriever.py`
+- `python_ai/lore_generator.py`
+- `python_ai/lore_manager.py`
 
 Persistent store:
 
-- [lore_store.json](/c:/Users/cgp23004/OneDrive%20-%20University%20of%20Connecticut/Documents/KharlrothGame/Kharlroth2D/python_ai/data/lore_store.json)
+- `python_ai/data/lore_store.json`
 
 Supported lore types:
 
@@ -132,16 +220,16 @@ Supported lore types:
 Lore flow:
 
 1. Intent is classified as `ask_lore`
-2. Topic is extracted from the classifier entities
-3. `LoreRetriever` searches the local lore store by topic, tags, and keyword overlap
+2. Topic is extracted from intent entities
+3. `LoreRetriever` searches stored lore by topic, tags, and keyword overlap
 4. If a good match exists, that lore entry is reused
-5. If not, `LoreGenerator` asks Ollama for strict JSON lore
+5. If no match exists, `LoreGenerator` asks Ollama for strict JSON lore
 6. Lore JSON is validated
-7. If invalid, generator retries once
+7. If invalid, generation retries once
 8. If generation still fails, a safe fallback lore entry is returned
 9. New lore is stored and reused on later interactions
 
-The lore generator obeys these canon constraints:
+Canon constraints used by the lore generator:
 
 - Kharlroth is the main hero
 - Yrsa is his wife and first guide
@@ -149,53 +237,56 @@ The lore generator obeys these canon constraints:
 - Kharlroth must recover relics
 - Eirik is a farmer
 - Styrbjorn is a wise elder in North Midgard
-- The Eye of Odin is in Yggdrasil’s roots guarded by Níðhöggr
+- The Eye of Odin is in Yggdrasil's roots guarded by Nidhoggr
 
 ## Example Flows
 
-### Eirik: directional guidance
-
-Player:
+Eirik directional guidance:
 
 ```text
-Do you know a wise man?
+Player: Do you know a wise man?
+Intent: ask_direction
+Result: Eirik points Kharlroth toward Styrbjorn in North Midgard.
 ```
 
-Pipeline:
-
-- intent -> `ask_direction`
-- handler -> directional guidance
-- response -> points toward Styrbjorn in North Midgard
-
-### Yrsa: lore generation and reuse
-
-Player:
+Yrsa lore generation and reuse:
 
 ```text
-What do you know about Fenrir?
+Player: What do you know about Fenrir?
+Intent: ask_lore
+Result: the lore store is checked first. Existing Fenrir lore is reused; otherwise new lore is generated and persisted.
 ```
 
-Pipeline:
+Eirik knowledge limits:
 
-- intent -> `ask_lore`
-- lore store checked first
-- if no existing Fenrir lore, new lore is generated and stored
-- later Fenrir questions reuse the same stored lore
+```text
+Player: What do you know about relics?
+Intent: ask_lore
+Result: Eirik admits relic lore is beyond him and points toward Styrbjorn.
+```
 
 ## Local Models
 
-Current recommended local models:
+Default model mapping is configured in `python_ai/service.py` and can be overridden with environment variables.
 
-- `phi3.5`
-  main character response model
-- `qwen2.5:1.5b`
-  intent classifier, light routing, validator/memory utility roles
+Defaults:
+
+- `KHARLROTH_OLLAMA_MODEL=phi3.5`
+- `KHARLROTH_OLLAMA_ROUTER_MODEL=qwen2.5:1.5b`
+- `KHARLROTH_OLLAMA_GUARDRAIL_MODEL=qwen2.5:1.5b`
+- `KHARLROTH_OLLAMA_VALIDATOR_MODEL=qwen2.5:1.5b`
+- `KHARLROTH_OLLAMA_MEMORY_MODEL=qwen2.5:1.5b`
+- `KHARLROTH_OLLAMA_RESPONDER_FAST_MODEL=phi3.5`
+- `KHARLROTH_OLLAMA_RESPONDER_SLOW_MODEL=phi3.5`
+- `KHARLROTH_OLLAMA_TUNER_MODEL=phi3.5`
+
+Optional model-side guardrail, router, and validator overrides are disabled by default because the local utility model can be overzealous. The regex guardrail and deterministic intent overrides remain active.
 
 ## Logging
 
 Debug logs are written as JSONL files in:
 
-- [python_ai/logs](/c:/Users/cgp23004/OneDrive%20-%20University%20of%20Connecticut/Documents/KharlrothGame/Kharlroth2D/python_ai/logs)
+- `python_ai/logs/`
 
 Current log streams include:
 
@@ -219,12 +310,8 @@ They cover:
 - lore generation vs reuse behavior
 - basic router/orchestrator integration
 
-## Frontend Notes
+## Repository Notes
 
-The browser chat UI still talks to the same endpoints and does not need to know about the internal AI pipeline changes.
-
-Relevant frontend files:
-
-- [src/ai/conversationOrchestrator.js](/c:/Users/cgp23004/OneDrive%20-%20University%20of%20Connecticut/Documents/KharlrothGame/Kharlroth2D/src/ai/conversationOrchestrator.js)
-- [src/ai/sceneConversationRuntime.js](/c:/Users/cgp23004/OneDrive%20-%20University%20of%20Connecticut/Documents/KharlrothGame/Kharlroth2D/src/ai/sceneConversationRuntime.js)
-- [src/ai/npcRegistry.js](/c:/Users/cgp23004/OneDrive%20-%20University%20of%20Connecticut/Documents/KharlrothGame/Kharlroth2D/src/ai/npcRegistry.js)
+- `backups/` is intentionally left local and untracked.
+- `dist/` is generated build output and ignored by git.
+- Active gameplay chat goes through the Python backend. The frontend only keeps the browser client, scene runtime, local transcript state, and NPC registry needed for gameplay.

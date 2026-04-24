@@ -7,8 +7,7 @@
     "ai:dev": "python -m uvicorn python_ai.app:app --host 127.0.0.1 --port 8000",
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview",
-    "tune:character": "node ./scripts/tune-character.mjs"
+    "preview": "vite preview"
   },
   "devDependencies": {
     "terser": "^5.46.1",

@@ -34,6 +34,7 @@ def test_fallback_intents() -> None:
     assert fallback_classify_intent("Who is Styrbjorn?").intent == "ask_character_info"
     assert fallback_classify_intent("What is Fenrir?").intent == "ask_lore"
     assert fallback_classify_intent("Goodbye for now").intent == "goodbye"
+    assert fallback_classify_intent("good by for now").intent == "goodbye"
 
 
 def test_intent_payload_validation() -> None:

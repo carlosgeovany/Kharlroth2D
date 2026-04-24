@@ -100,27 +100,48 @@ export function createSceneConversationRuntime({
       return;
     }
 
-    chatPanel.appendTurn({ speaker: "user", text: userMessage }, activeNpc.name);
+    const npc = activeNpc;
+    const userTurn = { speaker: "user", text: userMessage, guardrailVerdict: "allow" };
+    chatPanel.appendTurn(userTurn, npc.name);
+    conversationStateStore.appendTurn(npc.id, userTurn);
     chatPanel.resetInput();
     chatPanel.setBusy(true);
     chatPanel.setStatus("...");
-    chatPanel.showTyping(activeNpc.name);
+    chatPanel.showTyping(npc.name);
 
     try {
       const result = await conversationOrchestrator.sendMessage({
-        npc: activeNpc,
+        npc,
         sceneId: sceneName,
         userMessage,
-        nearbyObjects: buildNearbyObjects(sceneName, activeNpc.id),
+        nearbyObjects: buildNearbyObjects(sceneName, npc.id),
       });
 
+      const assistantTurn = {
+        speaker: "assistant",
+        text: result.responseText,
+        guardrailVerdict: result.guardrailVerdict ?? "allow",
+      };
       chatPanel.clearTyping();
-      chatPanel.appendTurn({ speaker: "assistant", text: result.responseText }, activeNpc.name);
+      chatPanel.appendTurn(assistantTurn, npc.name);
+      conversationStateStore.appendTurn(npc.id, assistantTurn);
       chatPanel.setBusy(false);
+
+      if (result.closeChat) {
+        chatPanel.setStatus("The words settle. Press Esc or the close button to leave.");
+        return;
+      }
+
       chatPanel.setStatus("Speak plainly. Keep to this world and its age.");
     } catch {
+      const fallbackTurn = {
+        speaker: "assistant",
+        text: npc.fallbackReply,
+        guardrailVerdict: "fallback",
+      };
       chatPanel.clearTyping();
-      chatPanel.appendTurn({ speaker: "assistant", text: activeNpc.fallbackReply }, activeNpc.name);
+      chatPanel.appendTurn(fallbackTurn, npc.name);
+      conversationStateStore.appendTurn(npc.id, fallbackTurn);
       chatPanel.setBusy(false);
       chatPanel.setStatus("The hearth has settled again.");
     }

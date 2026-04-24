@@ -1,6 +1,6 @@
 import { defineConfig } from "vite";
 
-const foundryProxy = {
+const aiProxy = {
   "/api/ai": {
     target: "http://127.0.0.1:8000",
     changeOrigin: true,
@@ -11,10 +11,10 @@ const foundryProxy = {
 export default defineConfig({
   base: "./",
   server: {
-    proxy: foundryProxy,
+    proxy: aiProxy,
   },
   preview: {
-    proxy: foundryProxy,
+    proxy: aiProxy,
   },
   build: {
     minify: "terser",

@@ -15,7 +15,7 @@ registerNorthMidgardScene();
 registerNidavellirScene();
 
 conversationOrchestrator.ensureReady().catch((error) => {
-  console.warn("Foundry local conversation warmup failed.", error);
+  console.warn("Local AI conversation warmup failed.", error);
 });
 
 k.go("welcome");

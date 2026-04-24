@@ -24,6 +24,7 @@ class ChatResponse(BaseModel):
     guardrail_verdict: str = Field(alias="guardrailVerdict")
     validator_status: str = Field(alias="validatorStatus")
     latency_ms: int = Field(alias="latencyMs")
+    close_chat: bool = Field(default=False, alias="closeChat")
 
 
 app = FastAPI(title="Kharlroth Local AI Bridge")

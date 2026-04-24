@@ -893,6 +893,7 @@ class ConversationService:
                 "guardrailVerdict": guardrail_verdict,
                 "validatorStatus": "redirect",
                 "latencyMs": latency_ms,
+                "closeChat": False,
             }
 
         classification = self.intent_classifier.classify(
@@ -938,6 +939,7 @@ class ConversationService:
                 "guardrailVerdict": guardrail_verdict,
                 "validatorStatus": "accept",
                 "latencyMs": latency_ms,
+                "closeChat": True,
             }
 
         session_note = derive_session_note(user_message)
@@ -1000,4 +1002,5 @@ class ConversationService:
             "guardrailVerdict": guardrail_verdict,
             "validatorStatus": validator_status,
             "latencyMs": latency_ms,
+            "closeChat": False,
         }

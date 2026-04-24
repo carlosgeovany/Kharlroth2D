@@ -164,6 +164,11 @@ def infer_topic(user_message: str) -> str | None:
 def apply_intent_overrides(classification: IntentClassification, user_message: str) -> IntentClassification:
     lowered = user_message.lower().strip()
 
+    if re.search(r"\b(bye|farewell|goodbye|good\s*bye|good\s+by|good-by|see you|leave you)\b", lowered):
+        classification.intent = "goodbye"
+        classification.confidence = max(classification.confidence, 0.98)
+        return classification
+
     if re.search(r"\bwho are you\b|\byour name\b", lowered):
         classification.intent = "ask_character_info"
         classification.confidence = max(classification.confidence, 0.98)
@@ -195,7 +200,7 @@ def apply_intent_overrides(classification: IntentClassification, user_message: s
 def fallback_classify_intent(user_message: str) -> IntentClassification:
     lowered = user_message.lower().strip()
 
-    if re.search(r"\b(bye|farewell|goodbye|see you|leave you)\b", lowered):
+    if re.search(r"\b(bye|farewell|goodbye|good\s*bye|good\s+by|good-by|see you|leave you)\b", lowered):
         intent = "goodbye"
     elif re.search(r"\bwise man\b|\bwise elder\b|\bstyrbjorn\b", lowered) and re.search(r"\b(do you know|where|find|go|looking for|seek)\b", lowered):
         intent = "ask_direction"
