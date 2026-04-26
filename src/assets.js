@@ -35,6 +35,18 @@ export function loadSharedAssets() {
     sliceX: 3,
     sliceY: 4,
   });
+  k.loadSprite("npc-child", "./mascChildHuman1v2.png", {
+    sliceX: 3,
+    sliceY: 4,
+    anims: {
+      "idle-down": 0,
+      "walk-down": { from: 0, to: 2, loop: true, speed: 7 },
+      "idle-side": 6,
+      "walk-side": { from: 6, to: 8, loop: true, speed: 7 },
+      "idle-up": 9,
+      "walk-up": { from: 9, to: 11, loop: true, speed: 7 },
+    },
+  });
 
   k.loadSound("bgMusic", "./adventure.mp3");
   k.loadSound("dogBark", "./dog_bark.mp3");

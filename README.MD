@@ -4,6 +4,16 @@ Kharlroth2D is a local-first browser RPG prototype built with Vite and Kaboom.
 
 The frontend runs the maps, movement, scene transitions, welcome screen, music, and chat UI. The NPC intelligence runs through a local Python backend that talks to Ollama on your own machine.
 
+## Screenshots
+
+![Kharlroth2D gameplay screenshot 1](screenshots/Screenshot1.png)
+
+![Kharlroth2D gameplay screenshot 2](screenshots/Screenshot2.png)
+
+![Kharlroth2D gameplay screenshot 3](screenshots/Screenshot3.png)
+
+![Kharlroth2D gameplay screenshot 4](screenshots/Screenshot4.png)
+
 ## Run The Game
 
 Requirements:

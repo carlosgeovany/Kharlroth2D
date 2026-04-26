@@ -31,5 +31,15 @@ export function registerMidgardScene() {
         height: 28,
       },
     ],
+    sceneActors: [
+      {
+        sprite: "npc-child",
+        anim: "walk-side",
+        x: 760,
+        y: 206,
+        patrolRange: 18,
+        patrolSpeed: 1.3,
+      },
+    ],
   });
 }

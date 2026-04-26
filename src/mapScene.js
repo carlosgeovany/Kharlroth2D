@@ -32,6 +32,41 @@ function setPlayerSpawn(player, spawnPoint) {
   player.pos = k.vec2(spawnPoint.x * scaleFactor, spawnPoint.y * scaleFactor);
 }
 
+function addSceneActor(actor) {
+  const startX = actor.x * scaleFactor;
+  const startY = actor.y * scaleFactor;
+  const patrolRange = (actor.patrolRange ?? 0) * scaleFactor;
+  const patrolSpeed = actor.patrolSpeed ?? 1;
+  let previousX = startX;
+
+  return k.add([
+    k.sprite(actor.sprite, {
+      anim: actor.anim,
+      frame: actor.frame,
+    }),
+    k.anchor("center"),
+    k.pos(startX, startY),
+    k.scale(scaleFactor),
+    {
+      update() {
+        if (!patrolRange) {
+          return;
+        }
+
+        const nextX = startX + Math.sin(k.time() * patrolSpeed) * patrolRange;
+        this.flipX = nextX < previousX;
+        this.pos.x = nextX;
+        previousX = nextX;
+
+        if (actor.anim && this.curAnim() !== actor.anim) {
+          this.play(actor.anim);
+        }
+      },
+    },
+    "scene-actor",
+  ]);
+}
+
 function playIdleAnimation(player) {
   if (player.direction === "down") {
     player.play("idle-down");
@@ -100,6 +135,7 @@ export function registerMapScene({
   customSpawns = {},
   boundaryActions = {},
   extraBoundaries = [],
+  sceneActors = [],
 }) {
   k.scene(sceneName, async ({ spawnId = "default" } = {}) => {
     ensureBackgroundMusic();
@@ -201,6 +237,9 @@ export function registerMapScene({
     }
 
     setPlayerSpawn(player, spawnPoint);
+    for (const actor of sceneActors) {
+      addSceneActor(actor);
+    }
     k.add(player);
     createSceneConversationRuntime({
       sceneName,
